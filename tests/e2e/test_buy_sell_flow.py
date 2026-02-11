@@ -66,13 +66,8 @@ class TestBuySellFlow:
 
         # Determine tick size and neg_risk
         tick_size = str(market.minimum_tick_size) if market.minimum_tick_size else "0.01"
-        # Detect neg_risk from the CLOB
         clob = ClobClientWrapper()
-        neg_risk: bool | None = None
-        try:
-            neg_risk = clob.client.get_neg_risk(no_token.token_id)
-        except Exception:
-            pass
+        neg_risk: bool = market.neg_risk
 
         # Set up allowances
         logger.info("Setting up allowances...")

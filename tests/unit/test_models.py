@@ -25,6 +25,35 @@ class TestMarket:
         assert m.active is True
         assert m.tokens == []
 
+    def test_from_gamma_api_response(self) -> None:
+        """Test parsing a market from the actual Gamma API response shape."""
+        data = {
+            "conditionId": "0xabc123",
+            "question": "Will it rain?",
+            "slug": "will-it-rain",
+            "endDateIso": "2026-12-31",
+            "active": True,
+            "closed": False,
+            "negRisk": False,
+            "orderMinSize": 5.0,
+            "orderPriceMinTickSize": 0.01,
+            "acceptingOrders": True,
+            "clobTokenIds": '["tok1", "tok2"]',
+            "outcomes": '["Yes", "No"]',
+            "outcomePrices": '["0.6", "0.4"]',
+        }
+        m = Market.model_validate(data)
+        assert m.condition_id == "0xabc123"
+        assert m.market_slug == "will-it-rain"
+        assert m.end_date_iso == "2026-12-31"
+        assert len(m.tokens) == 2
+        assert m.tokens[0].token_id == "tok1"
+        assert m.tokens[0].outcome == "Yes"
+        assert m.tokens[0].price == 0.6
+        assert m.tokens[1].outcome == "No"
+        assert m.minimum_order_size == 5.0
+        assert m.minimum_tick_size == 0.01
+
     def test_tokens_from_json_string(self) -> None:
         tokens_json = json.dumps([
             {"token_id": "tok1", "outcome": "Yes", "price": 0.6},
@@ -46,6 +75,18 @@ class TestMarket:
         )
         assert len(m.tokens) == 2
 
+    def test_null_tick_and_order_size(self) -> None:
+        """Gamma API sometimes returns null for these fields."""
+        data = {
+            "conditionId": "0xabc",
+            "question": "Q?",
+            "orderMinSize": None,
+            "orderPriceMinTickSize": None,
+        }
+        m = Market.model_validate(data)
+        assert m.minimum_order_size == 0.0
+        assert m.minimum_tick_size == 0.01
+
 
 class TestEvent:
     def test_basic(self) -> None:
@@ -55,7 +96,7 @@ class TestEvent:
 
     def test_markets_from_json_string(self) -> None:
         markets_json = json.dumps([
-            {"condition_id": "c1", "question": "Q1?"},
+            {"conditionId": "c1", "question": "Q1?"},
         ])
         e = Event(id="e1", title="E", markets=markets_json)  # type: ignore[arg-type]
         assert len(e.markets) == 1

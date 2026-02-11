@@ -52,7 +52,12 @@ class GammaClient:
 
     def get_market(self, condition_id: str) -> Market:
         """Fetch a single market by condition_id."""
-        data = self._get(f"/markets/{condition_id}")
+        params: dict[str, Any] = {"condition_id": condition_id, "limit": 1}
+        data = self._get("/markets", params=params)
+        if isinstance(data, list):
+            if not data:
+                raise GammaAPIError(f"Market not found: {condition_id}")
+            return Market.model_validate(data[0])
         return Market.model_validate(data)
 
     def search_markets(self, query: str, limit: int = 20) -> list[Market]:
