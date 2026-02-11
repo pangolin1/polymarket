@@ -1,0 +1,17 @@
+[project]
+name = "polybot"
+version = "0.1.0"
+description = "Polymarket programmatic trading bot"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests (no network, fully mocked)",
+    "integration: Integration tests (live read-only API calls)",
+    "e2e: End-to-end tests (real trades, requires funded wallet)",
+]
+addopts = "-v -p no:ethereum"
+
+[tool.mypy]
+strict = true
