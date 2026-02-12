@@ -6,6 +6,7 @@ from polybot.clients.clob import ClobClientWrapper
 from polybot.config import Settings, get_settings
 from polybot.constants import PRICE_MAX, PRICE_MIN
 from polybot.models.order import OpenOrder, OrderRequest, OrderResponse, Side
+from polybot.trading.trade_log import TradeLogger
 from polybot.utils.errors import OrderPlacementError, OrderValidationError
 from polybot.utils.logging import get_logger
 
@@ -19,9 +20,11 @@ class OrderManager:
         self,
         clob: ClobClientWrapper | None = None,
         settings: Settings | None = None,
+        trade_logger: TradeLogger | None = None,
     ) -> None:
         self._settings = settings or get_settings()
         self._clob = clob or ClobClientWrapper(self._settings)
+        self._trade_logger = trade_logger or TradeLogger()
 
     @property
     def clob(self) -> ClobClientWrapper:
@@ -75,6 +78,7 @@ class OrderManager:
                 f"Order rejected: {response.status}"
             )
 
+        self._trade_logger.log_trade(request, response)
         logger.info("Order placed: %s", response)
         return response
 

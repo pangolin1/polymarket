@@ -23,6 +23,9 @@ htmlcov/
 .coverage
 coverage.xml
 
+# Trade logs
+trades.csv
+
 # IDE
 .vscode/
 .idea/
