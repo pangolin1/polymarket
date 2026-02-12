@@ -69,20 +69,30 @@ class TestBuySellFlow:
         clob = ClobClientWrapper()
         neg_risk: bool = market.neg_risk
 
-        # Set up allowances
-        logger.info("Setting up allowances...")
+        # Set up on-chain approvals (USDC + ERC1155)
+        from polybot.wallet.manager import WalletManager
+
+        wm = WalletManager()
+        logger.info("Setting up on-chain approvals...")
+        wm.setup_approvals()
+
+        # Set up CLOB-side allowances
+        logger.info("Setting up CLOB allowances...")
         clob.update_balance_allowance()  # USDC/collateral
         clob.update_balance_allowance(no_token.token_id)  # conditional token
 
         # ---- Step 2: Buy NO shares ----
         logger.info("Step 2: Buying NO shares")
         ob = clob.get_orderbook(no_token.token_id)
+        logger.info("Orderbook — best_bid=%s best_ask=%s mid=%s", ob.best_bid, ob.best_ask, ob.midpoint)
+
+        # Buy aggressively: 2 ticks above best ask to ensure instant match
         buy_price = ob.best_ask
         if buy_price is None:
-            # Fall back to midpoint or a reasonable price
             mid = ob.midpoint
             buy_price = mid if mid is not None else 0.50
-        buy_price = round(buy_price, 2)
+        buy_price = round(buy_price + 0.02, 2)
+        buy_price = min(buy_price, 0.99)  # Cap at max valid price
         buy_size = 10.0  # Small size
 
         mgr = OrderManager(clob=clob)
@@ -121,10 +131,15 @@ class TestBuySellFlow:
         # ---- Step 4: Sell NO shares ----
         logger.info("Step 4: Selling NO shares")
         ob = clob.get_orderbook(no_token.token_id)
+        logger.info("Orderbook — best_bid=%s best_ask=%s mid=%s", ob.best_bid, ob.best_ask, ob.midpoint)
+
+        # Sell aggressively: 2 ticks below best bid to ensure instant match
         sell_price = ob.best_bid
-        if sell_price is None:
-            sell_price = round(buy_price - 0.01, 2)
-        sell_price = round(sell_price, 2)
+        if sell_price is not None:
+            sell_price = round(sell_price - 0.02, 2)
+        else:
+            sell_price = round(buy_price - 0.03, 2)
+        sell_price = max(sell_price, 0.01)  # Floor at minimum valid price
 
         sell_resp = mgr.sell(
             token_id=no_token.token_id,

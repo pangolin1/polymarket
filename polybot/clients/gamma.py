@@ -51,14 +51,24 @@ class GammaClient:
         return [Market.model_validate(m) for m in data]
 
     def get_market(self, condition_id: str) -> Market:
-        """Fetch a single market by condition_id."""
-        params: dict[str, Any] = {"condition_id": condition_id, "limit": 1}
-        data = self._get("/markets", params=params)
-        if isinstance(data, list):
-            if not data:
-                raise GammaAPIError(f"Market not found: {condition_id}")
-            return Market.model_validate(data[0])
-        return Market.model_validate(data)
+        """Fetch a single market by condition_id via the CLOB API.
+
+        The Gamma ``/markets`` list endpoint does not reliably filter by
+        condition_id, so we hit the CLOB ``/markets/{condition_id}`` endpoint
+        which returns accurate token data in snake_case format.
+        """
+        from polybot.config import get_settings
+
+        clob_url = get_settings().clob_api_url
+        url = f"{clob_url}/markets/{condition_id}"
+        logger.debug("GET %s", url)
+        resp = httpx.get(url, timeout=30.0)
+        if resp.status_code != 200:
+            raise GammaAPIError(
+                f"Market not found: {condition_id} (status {resp.status_code})",
+                status_code=resp.status_code,
+            )
+        return Market.model_validate(resp.json())
 
     def search_markets(self, query: str, limit: int = 20) -> list[Market]:
         """Search markets by text query."""

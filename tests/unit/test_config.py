@@ -16,6 +16,7 @@ class TestSettings:
         env = {
             "POLY_PRIVATE_KEY": "0xdeadbeef",
             "POLY_WALLET_ADDRESS": "0x1234567890abcdef",
+            "POLY_RPC_URL": DEFAULT_RPC_URL,
         }
         with patch.dict(os.environ, env, clear=False):
             reset_settings()
